@@ -1,3 +1,7 @@
+# Optimal firewall placement
+![animation](https://user-images.githubusercontent.com/81301826/212501478-0873d5cc-e3f3-47ed-a6c8-acefc3e5d1a9.gif)
+
+
 # About
 
 Adopted from: http://eda.ee.ucla.edu/EE201A-04Spring/kl.pdf
