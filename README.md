@@ -11,7 +11,8 @@ Our proposed variation"one-way partitioning" allows for one-sided gain in the pa
 ![ONEWAY](https://user-images.githubusercontent.com/81301826/212500989-a31129f0-0ed6-4d8b-90be-658274dd208f.png)
 
 # Benchmarks
-> NOTE: 'self' and 'other' variation are different vairation of the firewalls. 'self' protects itself only, while other protects itself and its connected nodes.
+> NOTE: 'self' and 'other' variation are different vairation of the firewalls. 'self' protects itself only, while 'other' protects itself and its connected nodes. 'other' variation results in less number of required firewalls
+
 ### Number of firewalls vs Number of clusters (self)
 ![self_variation_MO](https://user-images.githubusercontent.com/81301826/212501075-77bc502e-0a28-424b-8268-4809286d4723.png)
 
