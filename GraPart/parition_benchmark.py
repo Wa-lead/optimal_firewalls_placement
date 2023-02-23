@@ -3,7 +3,6 @@ This is exactly the same as the regular parition, but this also returns the numb
 """
 
 
-import time
 import numpy as np
 from GraPart.firewall import find_firewalls
 from GraPart.setup import setup
@@ -31,7 +30,6 @@ def multiway_partitioning(xy, group_matrix, labels_list, connect_matrix):
 
     return group_matrix, labels_list, count
 
-
 def one_way_partitioing(xy, group_matrix, labels_list, connect_matrix, margin=0.1):
     num_clusters = group_matrix.shape[0]
     pairs = [(i, j) for i in range(num_clusters)
@@ -40,7 +38,7 @@ def one_way_partitioing(xy, group_matrix, labels_list, connect_matrix, margin=0.
     while pairs:
         i, j = pairs.pop()
         count += 1
-        group_matrix, labels_list, INTERCHANGE = one_way_partitioing_single(
+        group_matrix, labels_list, INTERCHANGE = one_way_partitioing_single_dvalue(
             i, j, xy, group_matrix, labels_list, connect_matrix, original_k=num_clusters, margin=margin)
         if INTERCHANGE:
             # group j ate all the nodes in group i
@@ -295,6 +293,106 @@ def one_way_partitioing_single(group1, group2, xy, group_matrix, labels_list, co
                 break
             
         return group_matrix, labels_list_copy, INTERCHANGE    
+
+def one_way_partitioing_single_dvalue(group1, group2, xy, group_matrix, labels_list, connect_matrix, original_k, margin=0.1):
+    # Flag to check if the partitioning was successful
+        INTERCHANGE = False
+        # The upper bound for the size of the group, original_k because the group_matrix keeps changing and we want to keep track of the original size.
+        DEFAULT_SIZE = len(xy) / original_k
+        # The limit in which a cluster whould be within
+        UPPER_BOUND = (1+margin) * DEFAULT_SIZE
+
+    
+        # Extract the indices of the nodes in each group
+        group1_nodes = np.where(labels_list == group1)[0]
+        group2_nodes = np.where(labels_list == group2)[0]
+
+        # only nodes from group1_nodes that are connected to group2_nodes are considered
+        group1_edge_nodes = [i for i in group1_nodes if np.sum(connect_matrix[i, labels_list == group2]) > 0]
+
+        # Compute dvalues
+        dvalue_list = np.zeros(len(xy))
+        for i in group1_edge_nodes:
+            dvalue_list[i] = np.sum(connect_matrix[i, labels_list == group2]) - np.sum(connect_matrix[i, labels_list == group1])
+
+        # Initialize the labels_list_copy that will be used in the loop
+        labels_list_copy = labels_list.copy()
+
+        total_gain = 0
+        buffer = []
+        x_star = []
+        while len(group2_nodes) < UPPER_BOUND  and group_matrix[group1, group2] == 1:
+            
+            # Find node of highest dvalue from group1
+            max_dvalue_node = np.argmax(dvalue_list[group1_edge_nodes])
+            max_dvalue_node = group1_edge_nodes[max_dvalue_node]
+
+            # Buffer the node and the gain
+            total_gain += dvalue_list[max_dvalue_node]
+            x_star.append(max_dvalue_node)
+            buffer.append({'gain': total_gain, 'x_star': x_star.copy()})
+
+            # interchange the node
+            labels_list_copy[max_dvalue_node] = group2
+
+        
+            # Update the group1_nodes and group2_nodes
+            group1_nodes = np.where(labels_list_copy == group1)[0]
+            group2_nodes = np.where(labels_list_copy == group2)[0]
+
+            # only nodes from group1_nodes that are connected to group2_nodes are considered
+            group1_edge_nodes = [i for i in group1_nodes if np.sum(connect_matrix[i, labels_list_copy == group2]) > 0]
+            
+            if len(group1_nodes) == 0:
+                    # Find the group numbers larger than group1
+                    group_numbers = np.arange(group1+1, group_matrix.shape[0])
+                    # Decrease the group numbers by 1
+                    labels_list_copy[np.isin(labels_list_copy, group_numbers)] -= 1
+                    
+                    # update the group matrix
+                    groups_count = len(np.unique(labels_list_copy))
+                    group_matrix = np.zeros((groups_count,groups_count))
+                    for i in range(groups_count):
+                        for j in range(i + 1, groups_count):
+                            if np.sum(connect_matrix[labels_list_copy == i][:, labels_list_copy == j]) > 0:
+                                group_matrix[i, j] = 1
+                                group_matrix[j, i] = 1
+                    INTERCHANGE = True
+                    break
+
+            # Compute dvalues
+            dvalue_list = np.zeros(len(xy))
+            for i in group1_edge_nodes:
+                dvalue_list[i] = np.sum(connect_matrix[i, labels_list_copy == group2]) - np.sum(connect_matrix[i, labels_list_copy == group1])
+
+            # Update the group matrix
+            groups_count = len(np.unique(labels_list_copy))
+            group_matrix = np.zeros((groups_count, groups_count))
+            for i in range(groups_count):
+                for j in range(i + 1, groups_count):
+                    if np.sum(connect_matrix[labels_list_copy == i][:, labels_list_copy == j]) > 0:
+                        group_matrix[i, j] = 1
+                        group_matrix[j, i] = 1
+            
+
+        if buffer:
+            # Find the best buffer
+            best_buffer = max(buffer, key=lambda x: x['gain'])
+            if best_buffer['gain'] > 0:
+            # Interchange the nodes
+                for i in best_buffer['x_star']:
+                    labels_list[i] = group2
+                INTERCHANGE = True 
+
+        groups_count = len(np.unique(labels_list))
+        group_matrix = np.zeros((groups_count, groups_count))
+        for i in range(groups_count):
+            for j in range(i + 1, groups_count):
+                if np.sum(connect_matrix[labels_list == i][:, labels_list == j]) > 0:
+                    group_matrix[i, j] = 1
+                    group_matrix[j, i] = 1 
+                
+        return group_matrix, labels_list, INTERCHANGE
 
 def bisection(xy,
             max_clusters = 30,

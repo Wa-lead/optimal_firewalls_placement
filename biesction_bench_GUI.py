@@ -8,7 +8,7 @@ import time
 class MyApp(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
-        self.title("Bench mark for bisection")
+        self.title("Benchmark for bisection")
         self.input_frame = tk.Frame(self)
 
         # Create the numeric inputs
@@ -22,7 +22,7 @@ class MyApp(tk.Tk):
         self.input3 = tk.Entry(self.input_frame)
         self.input3.insert(0, 20)
         self.input4_label = tk.Label(
-            self.input_frame, text="Connect threshold:")
+        self.input_frame, text="Connect threshold:")
         self.input4 = tk.Entry(self.input_frame)
         self.input4.insert(0, 1)
         self.input5_label = tk.Label(self.input_frame, text="#Max Clusters:")

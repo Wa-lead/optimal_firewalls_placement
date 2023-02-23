@@ -1,5 +1,6 @@
 import numpy as np
 from k_means_constrained import KMeansConstrained
+import matplotlib.pyplot as plt
 
 def select_KMeans_centroids(xy, num_clusters):
     # select the centroids for the KMeans algorithm
@@ -11,21 +12,80 @@ def select_KMeans_centroids(xy, num_clusters):
         centroids = np.append(centroids, np.argmax(distances))
     return xy[centroids.astype(int)]
 
-def setup(xy, num_clusters , connect_distance):
-    # create connect_matrix, labels_list, and num_groups
+
+def create_isolated_clusters(connect_matrix, xy, num_clusters, low_bound, up_bound):
+    num_nodes = len(xy)
+    clusters = []
+    visited = [False] * num_nodes
+    for node in range(num_nodes):
+        if not visited[node]:
+            cluster = []
+            stack = [node]
+            while stack:
+                curr = stack.pop()
+                if not visited[curr]:
+                    visited[curr] = True
+                    cluster.append(curr)
+                    for neighbor in range(num_nodes):
+                        if connect_matrix[curr][neighbor]:
+                            stack.append(neighbor)
+            clusters.append(cluster)
+
+        clusters = [cluster for cluster in clusters if len(cluster) <= up_bound and len(cluster) >= low_bound]
+
+    # intitilzie labels_list iwht -1 using numpy
+    labels_list = np.full(num_nodes, -1, dtype=int)
+    for i, cluster in enumerate(clusters):
+        for node in cluster:
+            labels_list[node] = i
+
+    return labels_list
+
+def setup(xy, num_clusters , connect_distance, isolated_clusters=True):
+
     # Calculate the pairwise distances between all points
     distances = np.linalg.norm(xy[:, None, :] - xy, axis=-1)
     # Set the elements of the connect_matrix to 1 if the distance is less than or equal to the connect_distance
     connect_matrix = distances <= connect_distance
+
     # zero the diagonal
     np.fill_diagonal(connect_matrix, 0)
     connect_matrix = connect_matrix.astype(int)
 
-
-    up_bound = int(1.1*(len(xy)/num_clusters))
+    # Set the upper and lower bounds for the number of nodes in each cluster
+    up_bound = np.ceil(1.1*(len(xy)/num_clusters))
     low_bound = int(0.9*(len(xy)/num_clusters))
+
+
+    # if isolated_clusters is True, then create isolated clusters
+    if isolated_clusters:
+        # Nodes that are not in the isloated clusters will be labeled with -1
+        labels_list_isolated = create_isolated_clusters(connect_matrix, xy, num_clusters, low_bound, up_bound)
+        xy = xy[labels_list_isolated == -1]
+        num_clusters -= len(np.unique(labels_list_isolated)) -1
+
+    # Reset the boundaries after the first clustering step
+    up_bound = np.ceil(1.1*(len(xy)/num_clusters))
+    low_bound = int(0.9*(len(xy)/num_clusters))
+
+    # log for debugging
+    print("Number of clusters: ", num_clusters)
+    print("Upper bound: ", up_bound)
+    print('size_max * num_clusters: ', up_bound * num_clusters)
+    print('number of nodes: ', len(xy)) 
     centroids = select_KMeans_centroids(xy, num_clusters)
     labels_list= KMeansConstrained(n_clusters=num_clusters, size_min=low_bound, size_max=up_bound, init=centroids).fit(xy).labels_
+    
+    if isolated_clusters:
+        # Compensate for the number of isolated clusters
+        cluster_count_compensation = np.unique(labels_list_isolated).shape[0] - 1
+        idx = 0
+        for i, label in enumerate(labels_list_isolated):
+            if label == -1:
+                labels_list_isolated[i] = labels_list[idx] + cluster_count_compensation
+                idx += 1
+        labels_list = labels_list_isolated
+
 
     # Get the unique group labels
     group_labels = np.unique(labels_list)

@@ -64,29 +64,20 @@ def one_way_PLUS_multi_way_bench(xy, group_matrix, labels_list, connect_matrix, 
 
     return results
 
-
 def parallel_benchmark_multiway_oneway(max_clusters, num_nodes, connect_threshold, xMax, yMax, max_iter=1000, margin=0.1, save_dir=None):
     if not os.path.exists(f'{SAVE_PATH}{save_dir}/raw_results'):
         os.makedirs(f'{SAVE_PATH}{save_dir}/raw_results')
 
 
     # Divide the number of clusters into multiple processes
-    firewalls_per_cluster = max_clusters // mp.cpu_count()
+    iterations_per_process = max_iter // mp.cpu_count()
     processes = []
 
-    print("Starting benchmark for {} clusters".format(max_clusters))
-    print(max_iter, mp.cpu_count())
     # Create a process for each set of clusters
-    for i in range(mp.cpu_count()):
-        print("Starting process {}".format(i))
-        if i == 0:
-            start = 2
-            end = firewalls_per_cluster
-        else:
-            start = i * firewalls_per_cluster
-            end = start + firewalls_per_cluster
-        p = mp.Process(target=process_benchmark_multiway_oneway, args=(
-            start, end, num_nodes, connect_threshold, xMax, yMax, max_iter, margin, save_dir))
+    for process_id in range(mp.cpu_count()):
+        print('A new process (ID = {}) will run {} iterations'.format(process_id,iterations_per_process))
+        p = mp.Process(target=process_benchmark_multiway_oneway, args=(process_id,max_clusters,
+           num_nodes, connect_threshold, xMax, yMax, iterations_per_process, margin, save_dir))
         processes.append(p)
         p.start()
 
@@ -94,23 +85,27 @@ def parallel_benchmark_multiway_oneway(max_clusters, num_nodes, connect_threshol
     for p in processes:
         p.join()
 
-
-def process_benchmark_multiway_oneway(start, end, num_nodes, connect_threshold, xMax, yMax, max_iter, margin, save_dir):
-    print(end - start, max_iter)
+def process_benchmark_multiway_oneway(process_id,max_clusters,num_nodes, connect_threshold, xMax, yMax, max_iter, margin, save_dir):
     results = []
-    for num_clusters in range(start, end):
-        for i in range(max_iter):
-            print("Running benchmark for {} clusters".format(num_clusters))
+    for _ in range(max_iter):
             x = np.random.uniform(size=num_nodes, low=0, high=xMax)
             y = np.random.uniform(size=num_nodes, low=0, high=yMax)
             xy = np.array([x, y]).T.astype('float32')
-            connect_matrix, labels_list, group_matrix = setup(
-                xy, num_clusters, connect_threshold)
-            res = one_way_PLUS_multi_way_bench(
-                xy, group_matrix, labels_list, connect_matrix, margin=margin)
-            results.append(res)
+            for num_clusters in range(2, max_clusters):
+                try:
+                    print("Running benchmark for {} clusters".format(num_clusters))
+                    connect_matrix, labels_list, group_matrix = setup(
+                        xy, num_clusters, connect_threshold)
+                    res = one_way_PLUS_multi_way_bench(
+                        xy, group_matrix, labels_list, connect_matrix, margin=margin)
+                    results.append(res)
+                except Exception as e:
+                    print("Error in benchmarking for {} clusters".format(num_clusters))
+                    print(e)
+                    continue
+                    
 
-    with open(f'{SAVE_PATH}{save_dir}/raw_results/results_{start}_{time.time()}.json', 'w') as f:
+    with open(f'{SAVE_PATH}{save_dir}/raw_results/results_{process_id}.json', 'w') as f:
         json.dump(results, f)
 
 
@@ -160,14 +155,14 @@ def parallel_benchmark_bisection(max_clusters,max_firewalls, num_nodes, connect_
         os.makedirs(f'{SAVE_PATH}{save_dir}/raw_results')
 
     # Divide the number of clusters into multiple processes
-    firewalls_per_cluster = max_firewalls // mp.cpu_count()
+    iterations_per_process = max_iter // mp.cpu_count()
     processes = []
 
     # Create a process for each set of clusters
-    for i in range(mp.cpu_count()):
-        start = i * firewalls_per_cluster
-        end = start + firewalls_per_cluster
-        p = mp.Process(target=process_benchmark_bisection, args=(start, end, max_clusters, num_nodes, connect_threshold, xMax, yMax, variation, max_iter, margin, save_dir))
+    for process_id in range(mp.cpu_count()):
+        print('A new process (ID = {}) will run {} iterations'.format(process_id,iterations_per_process))
+        p = mp.Process(target=process_benchmark_bisection, args=(process_id,max_firewalls,max_clusters,
+           num_nodes, connect_threshold, xMax, yMax, variation, iterations_per_process, margin, save_dir))
         processes.append(p)
         p.start()
 
@@ -176,21 +171,30 @@ def parallel_benchmark_bisection(max_clusters,max_firewalls, num_nodes, connect_
         p.join()
 
 
-def process_benchmark_bisection(start, end, max_xlusters, num_nodes, connect_threshold, xMax, yMax, variation, max_iter, margin,save_dir):
+def process_benchmark_bisection(process_id, max_firewalls, max_xlusters, num_nodes, connect_threshold, xMax, yMax, variation, max_iter, margin,save_dir):
     results = []
-    for num_firewalls in range(start, end):
-        for _ in range(max_iter):
-            print("Running benchmark for {} firewalls".format(num_firewalls))
-            x = np.random.uniform(size=num_nodes, low=0, high=xMax)
-            y = np.random.uniform(size=num_nodes, low=0, high=yMax)
-            xy = np.array([x, y]).T.astype('float32')
-            res = bisection_bench(xy,
-                                  max_clusters=max_xlusters,
-                                  connect_distance=connect_threshold,
-                                  max_firewalls=num_firewalls,
-                                  variation=variation,
-                                  margin=margin)
-            results.append(res)
+    for _ in range(max_iter):
+        print("Running benchmark for {} firewalls".format(num_firewalls))
+        x = np.random.uniform(size=num_nodes, low=0, high=xMax)
+        y = np.random.uniform(size=num_nodes, low=0, high=yMax)
+        xy = np.array([x, y]).T.astype('float32')
+        for num_firewalls in range(0, max_firewalls):
+            try:
+                res = bisection_bench(xy,
+                                    max_clusters=max_xlusters,
+                                    connect_distance=connect_threshold,
+                                    max_firewalls=num_firewalls,
+                                    variation=variation,
+                                    margin=margin)
+                results.append(res)
+                # how can i print the error that happened here in the except?
+                #answer:
+            except Exception as e:
+                print("Failed to run benchmark for {} firewalls".format(num_firewalls))
+                print(e)
+                continue
 
-    with open(f'{SAVE_PATH}{save_dir}/raw_results/results_{start}.json', 'w') as f:
+
+
+    with open(f'{SAVE_PATH}{save_dir}/raw_results/results_{process_id}.json', 'w') as f:
         json.dump(results, f)

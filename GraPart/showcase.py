@@ -89,17 +89,18 @@ def bisection_showcase(num_nodes = 300,
     y = np.random.uniform(size=num_nodes, low=0, high=yMax)
     xy = np.array([x,y]).T.astype('float32')
     results = []
+    best_run_buffer = []
     for _ in range(max_iter):
         if variation == "self":
             results += (bisection(xy, max_clusters = max_clusters,
                                     max_firewalls = max_firewalls,
                                     connect_distance = connect_distance,
-                                    variation = "self", margin = margin))
+                                    variation = "self", margin = margin, return_results=True))
         elif variation == "other":
             results+= (bisection(xy, max_clusters = max_clusters,
                                     max_firewalls = max_firewalls,
                                     connect_distance = connect_distance,
-                                    variation = "other", margin = margin))
+                                    variation = "other", margin = margin, return_results=True))
 
 
     results = pd.DataFrame(data = results, columns = results[0].keys())
