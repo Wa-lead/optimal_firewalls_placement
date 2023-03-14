@@ -112,7 +112,7 @@ class MyApp(tk.Tk):
         results, outputs = bisection_showcase(num_nodes = num_nodes,
                                             max_clusters = max_clusters,
                                             max_firewalls = max_firewalls,
-                                            connect_distance = connect_threshold,
+                                            connect_threshold = connect_threshold,
                                             xMax = xMax,
                                             yMax = yMax,
                                             variation = variation,

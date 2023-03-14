@@ -24,14 +24,9 @@ class MyApp(tk.Tk):
         self.input4_label = tk.Label(self.input_frame, text="Connect threshold:")
         self.input4 = tk.Entry(self.input_frame)
         self.input4.insert(0, 1)
-        self.input5_label = tk.Label(self.input_frame, text="#Clusters:")
+        self.input5_label = tk.Label(self.input_frame, text="Max size:")
         self.input5 = tk.Entry(self.input_frame)
-        self.input5.insert(0, 4)
-        self.input_label7 = tk.Label(self.input_frame, text="Margin (for Oneway):")
-        self.input7 = tk.Entry(self.input_frame)
-        self.input7.insert(0, 0.1)
-
-
+        self.input5.insert(0, 100)
         self.input6_label = tk.Label(self.input_frame, text="Firewall variation:")
         # Create a variable to hold the toggle state
         self.toggle_var = tk.StringVar()
@@ -61,8 +56,6 @@ class MyApp(tk.Tk):
         self.input4.pack(side="top")
         self.input5_label.pack(side="top")
         self.input5.pack(side="top")
-        self.input_label7.pack(side="top")
-        self.input7.pack(side="top")
         self.input6_label.pack(side="top")
         self.toggle_button1.pack(side="top")
         self.toggle_button2.pack(side="top")
@@ -91,20 +84,19 @@ class MyApp(tk.Tk):
         xMax = int(self.input2.get())
         yMax = int(self.input3.get())
         connect_threshold = float(self.input4.get())
-        num_clusters = int(self.input5.get())
+        max_size = int(self.input5.get())
         variaiton  = self.toggle_var.get()
-        margin = float(self.input7.get())
 
         # Get the value of the selected radio button
         # selected_option = 1 if self.radio_button1.get() else 2
 
         # Run the algorithm using the input values and selected option
         figures, outputs = single_network_showcase(xy=None, num_nodes= num_nodes,
-                                                    connect_distance= connect_threshold,
-                                                    num_clusters = num_clusters,
+                                                    connect_threshold= connect_threshold,
+                                                    max_size = max_size,
                                                     xMax = xMax,
                                                     yMax = yMax,
-                                                    variation = variaiton, margin=margin)
+                                                    variation = variaiton)
         matplot_figure1 = figures[0]
         matplot_figure2 = figures[1]
         matplot_figure3 = figures[2]

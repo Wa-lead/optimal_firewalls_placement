@@ -110,7 +110,6 @@ def read_Bisection_data(folder_name):
     df = df.groupby('max_firewalls', as_index=False).mean()
     return df
 
-
 def generate_graphs_for_Bisection(save_dir):
 
     read_dir = f'{SAVE_PATH}{save_dir}/raw_results'
